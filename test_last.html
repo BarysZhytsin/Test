@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  />
+  <title>Web Service Configuration Simulation</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #1f2933;
+      background: #ffffff;
+    }
+
+    .autoscale-quiz {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 16px;
+      border: 1px solid #b8c2cc;
+      border-radius: 6px;
+      background: #fafbfc;
+    }
+
+    .autoscale-control {
+      margin: 22px 0;
+    }
+
+    label {
+      display: block;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    input[type="range"] {
+      display: block;
+      width: 100%;
+      max-width: 460px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+
+    .range-labels {
+      display: flex;
+      justify-content: space-between;
+      max-width: 460px;
+      margin-top: 4px;
+      color: #52606d;
+      font-size: 13px;
+    }
+
+    .autoscale-metrics {
+      margin-top: 20px;
+      padding: 16px;
+      border: 1px solid #d3dce5;
+      border-radius: 4px;
+      background: #ffffff;
+    }
+
+    .autoscale-metrics p {
+      margin: 9px 0;
+    }
+
+    .autoscale-status {
+      margin-top: 16px !important;
+      padding: 10px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .autoscale-good {
+      color: #0b5d1e;
+      background: #e7f6eb;
+      border: 1px solid #87c997;
+    }
+
+    .autoscale-warning {
+      color: #7a4300;
+      background: #fff4df;
+      border: 1px solid #efc37d;
+    }
+
+    .formula {
+      margin-top: 18px;
+      color: #52606d;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="autoscale-quiz">
+    <div class="autoscale-control">
+      <label for="autoscale-workers">
+        Worker servers:
+        <strong id="autoscale-workers-value">5</strong>
+      </label>
+
+      <input
+        id="autoscale-workers"
+        type="range"
+        min="1"
+        max="10"
+        step="1"
+        value="5"
+      />
+
+      <div class="range-labels" aria-hidden="true">
+        <span>1 worker</span>
+        <span>10 workers</span>
+      </div>
+    </div>
+
+    <div class="autoscale-control">
+      <label for="autoscale-cache">
+        Cache hit rate:
+        <strong id="autoscale-cache-value">40%</strong>
+      </label>
+
+      <input
+        id="autoscale-cache"
+        type="range"
+        min="0"
+        max="100"
+        step="5"
+        value="40"
+      />
+
+      <div class="range-labels" aria-hidden="true">
+        <span>0%</span>
+        <span>100%</span>
+      </div>
+    </div>
+
+    <div class="autoscale-metrics">
+      <p>
+        Estimated latency:
+        <strong id="autoscale-latency">--</strong>
+      </p>
+
+      <p>
+        Estimated operating cost:
+        <strong id="autoscale-cost">--</strong>
+      </p>
+
+      <p
+        id="autoscale-status"
+        class="autoscale-status"
+        role="status"
+        aria-live="polite"
+      >
+        Adjust the controls to test a configuration.
+      </p>
+    </div>
+
+    <div class="formula">
+      <p><strong>Model used by this simulation</strong></p>
+      <p>Latency = 650 − 40 × workers − 2 × cache-hit-rate</p>
+      <p>Cost = 2 + 0.45 × workers + 0.03 × cache-hit-rate</p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var workersInput = document.getElementById("autoscale-workers");
+      var cacheInput = document.getElementById("autoscale-cache");
+
+      var workersValue = document.getElementById("autoscale-workers-value");
+      var cacheValue = document.getElementById("autoscale-cache-value");
+
+      var latencyOutput = document.getElementById("autoscale-latency");
+      var costOutput = document.getElementById("autoscale-cost");
+      var statusOutput = document.getElementById("autoscale-status");
+
+      function getConfiguration() {
+        var workers = Number(workersInput.value);
+        var cache = Number(cacheInput.value);
+
+        var latency = 650 - (40 * workers) - (2 * cache);
+        var cost = 2 + (0.45 * workers) + (0.03 * cache);
+
+        return {
+          workers: workers,
+          cache: cache,
+          latency: latency,
+          cost: cost
+        };
+      }
+
+      function sendAnswerToEdx(configuration) {
+        /*
+         * The parent Open edX page receives this message and saves
+         * the answer for use when the learner selects Submit.
+         *
+         * The answer format is intentionally simple:
+         * workers|cache
+         *
+         * Example: 8|70
+         */
+        window.parent.postMessage(
+          {
+            type: "autoscale-quiz-answer",
+            answer: configuration.workers + "|" + configuration.cache
+          },
+          "*"
+        );
+      }
+
+      function updateSimulation() {
+        var configuration = getConfiguration();
+
+        var latencyOkay = configuration.latency <= 200;
+        var costOkay = configuration.cost <= 8.5;
+
+        workersValue.textContent = configuration.workers;
+        cacheValue.textContent = configuration.cache + "%";
+
+        latencyOutput.textContent =
+          configuration.latency.toFixed(0) + " ms";
+
+        costOutput.textContent =
+          configuration.cost.toFixed(2) + " units";
+
+        if (latencyOkay && costOkay) {
+          statusOutput.className =
+            "autoscale-status autoscale-good";
+
+          statusOutput.textContent =
+            "This configuration meets both requirements. " +
+            "Select Submit in the course page to receive credit.";
+        } else {
+          statusOutput.className =
+            "autoscale-status autoscale-warning";
+
+          if (!latencyOkay && !costOkay) {
+            statusOutput.textContent =
+              "This configuration exceeds both the latency target " +
+              "and the cost limit.";
+          } else if (!latencyOkay) {
+            statusOutput.textContent =
+              "Latency is too high. Increase workers, cache hit rate, or both.";
+          } else {
+            statusOutput.textContent =
+              "Cost is too high. Reduce workers, cache hit rate, or both.";
+          }
+        }
+
+        sendAnswerToEdx(configuration);
+      }
+
+      workersInput.addEventListener("input", updateSimulation);
+      workersInput.addEventListener("change", updateSimulation);
+
+      cacheInput.addEventListener("input", updateSimulation);
+      cacheInput.addEventListener("change", updateSimulation);
+
+      /*
+       * Send the initial 5-worker / 40%-cache configuration to edX.
+       */
+      updateSimulation();
+    }());
+  </script>
+</body>
+</html>
