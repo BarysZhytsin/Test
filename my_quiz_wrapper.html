@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 15px; background: #f9f9f9; }
+        .control-group { margin-bottom: 10px; }
+        label { display: inline-block; width: 140px; font-weight: bold; }
+        canvas { background: #fff; border: 1px solid #ccc; display: block; margin-top: 15px; }
+        .feedback { margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h3>Spring-Mass Oscillation Analyzer</h3>
+    <p>Set Mass to <b>2.0 kg</b> and Spring Constant to <b>50 N/m</b>, run simulation, and submit.</p>
+    <div class="control-group">
+        <label>Mass (kg):</label>
+        <input type="range" id="massRange" min="0.5" max="5.0" step="0.1" value="1.0">
+        <span id="massVal">1.0</span>
+    </div>
+    <div class="control-group">
+        <label>Spring Constant (N/m):</label>
+        <input type="range" id="kRange" min="10" max="100" step="5" value="20">
+        <span id="kVal">20</span>
+    </div>
+    <button id="runBtn">Run Simulation</button>
+    <canvas id="simCanvas" width="400" height="150"></canvas>
+    <div class="feedback" id="feedback">Status: Not run yet.</div>
+
+    <script>
+        const massRange = document.getElementById('massRange');
+        const kRange = document.getElementById('kRange');
+        const massVal = document.getElementById('massVal');
+        const kVal = document.getElementById('kVal');
+        const runBtn = document.getElementById('runBtn');
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const feedback = document.getElementById('feedback');
+
+        let simulationRun = false;
+        let correctParamsUsed = false;
+
+        function updateLabels() {
+            massVal.innerText = massRange.value;
+            kVal.innerText = kRange.value;
+        }
+
+        massRange.addEventListener('input', updateLabels);
+        kRange.addEventListener('input', updateLabels);
+
+        runBtn.addEventListener('click', () => {
+            simulationRun = true;
+            let m = parseFloat(massRange.value);
+            let k = parseFloat(kRange.value);
+            
+            // Check target: Mass = 2.0, K = 50
+            if (Math.abs(m - 2.0) < 0.01 && Math.abs(k - 50) < 0.1) {
+                correctParamsUsed = true;
+                feedback.style.color = 'green';
+                feedback.innerText = 'Success! Correct parameters simulated and verified.';
+            } else {
+                correctParamsUsed = false;
+                feedback.style.color = 'red';
+                feedback.innerText = 'Simulation complete, but parameters do not match target (Mass: 2.0, K: 50).';
+            }
+
+            // Simple animation frame
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.moveTo(200, 0);
+            ctx.lineTo(200, 100);
+            ctx.arc(200, 100, 15 * m, 0, Math.PI * 2);
+            ctx.fillStyle = '#3498db';
+            ctx.fill();
+            ctx.stroke();
+        });
+
+        // Open edX JSInput API registration
+        function SpringQuiz(element) {
+            this.element = element;
+        }
+        SpringQuiz.prototype = {
+            getGrade: function() {
+                // Returns 1.0 if correct parameters were simulated, else 0.0
+                return correctParamsUsed ? 1.0 : 0.0;
+            },
+            getState: function() {
+                return JSON.stringify({
+                    mass: massRange.value,
+                    k: kRange.value,
+                    run: simulationRun,
+                    correct: correctParamsUsed
+                });
+            },
+            setState: function(stateString) {
+                if (!stateString) return;
+                let state = JSON.parse(stateString);
+                massRange.value = state.mass;
+                kRange.value = state.k;
+                simulationRun = state.run;
+                correctParamsUsed = state.correct;
+                updateLabels();
+            }
+        };
+
+        window.gradeRegistry = window.gradeRegistry || {};
+        window.gradeRegistry.register("SpringQuiz", function(element) {
+            return new SpringQuiz(element);
+        });
+    </script>
+</body>
+</html>
