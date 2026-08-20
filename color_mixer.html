@@ -108,7 +108,7 @@
                 'State: ' + ColorMixer.getState();
         },
         
-        checkAnswer: function() {
+        function checkAnswer() {
             var r = parseInt(document.getElementById('red-slider').value);
             var g = parseInt(document.getElementById('green-slider').value);
             var b = parseInt(document.getElementById('blue-slider').value);
@@ -137,7 +137,7 @@
             }
         },
         
-        getState: function() {
+        function getState() {
             var state = {
                 red: document.getElementById('red-slider').value,
                 green: document.getElementById('green-slider').value,
@@ -146,7 +146,7 @@
             return JSON.stringify(state);
         },
         
-        setState: function(stateStr) {
+        function setState(stateStr) {
             console.log('setState called with:', stateStr);
             if (stateStr) {
                 try {
@@ -161,7 +161,7 @@
             }
         },
         
-        getGrade: function() {
+        function getGrade() {
             var r = parseInt(document.getElementById('red-slider').value);
             var g = parseInt(document.getElementById('green-slider').value);
             var b = parseInt(document.getElementById('blue-slider').value);
