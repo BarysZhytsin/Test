@@ -2,10 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Web Service Configuration Simulation</title>
 
   <style>
@@ -172,6 +169,9 @@
     (function () {
       "use strict";
 
+      var STORAGE_WORKERS = "autoscaleQuizWorkers";
+      var STORAGE_CACHE = "autoscaleQuizCache";
+
       var workersInput = document.getElementById("autoscale-workers");
       var cacheInput = document.getElementById("autoscale-cache");
 
@@ -182,31 +182,32 @@
       var costOutput = document.getElementById("autoscale-cost");
       var statusOutput = document.getElementById("autoscale-status");
 
+      function restoreSavedValues() {
+        var savedWorkers = sessionStorage.getItem(STORAGE_WORKERS);
+        var savedCache = sessionStorage.getItem(STORAGE_CACHE);
+
+        if (savedWorkers !== null && /^[0-9]+$/.test(savedWorkers)) {
+          workersInput.value = savedWorkers;
+        }
+
+        if (savedCache !== null && /^[0-9]+$/.test(savedCache)) {
+          cacheInput.value = savedCache;
+        }
+      }
+
       function getConfiguration() {
         var workers = Number(workersInput.value);
         var cache = Number(cacheInput.value);
 
-        var latency = 650 - (40 * workers) - (2 * cache);
-        var cost = 2 + (0.45 * workers) + (0.03 * cache);
-
         return {
           workers: workers,
           cache: cache,
-          latency: latency,
-          cost: cost
+          latency: 650 - (40 * workers) - (2 * cache),
+          cost: 2 + (0.45 * workers) + (0.03 * cache)
         };
       }
 
       function sendAnswerToEdx(configuration) {
-        /*
-         * The parent Open edX page receives this message and saves
-         * the answer for use when the learner selects Submit.
-         *
-         * The answer format is intentionally simple:
-         * workers|cache
-         *
-         * Example: 8|70
-         */
         window.parent.postMessage(
           {
             type: "autoscale-quiz-answer",
@@ -220,7 +221,13 @@
         var configuration = getConfiguration();
 
         var latencyOkay = configuration.latency <= 200;
-        var costOkay = configuration.cost <= 8.5;
+        var costOkay = configuration.cost <= 8.50;
+
+        /*
+         * Preserve values if Open edX rerenders the iframe after Submit.
+         */
+        sessionStorage.setItem(STORAGE_WORKERS, configuration.workers);
+        sessionStorage.setItem(STORAGE_CACHE, configuration.cache);
 
         workersValue.textContent = configuration.workers;
         cacheValue.textContent = configuration.cache + "%";
@@ -244,8 +251,7 @@
 
           if (!latencyOkay && !costOkay) {
             statusOutput.textContent =
-              "This configuration exceeds both the latency target " +
-              "and the cost limit.";
+              "This configuration exceeds both the latency target and the cost limit.";
           } else if (!latencyOkay) {
             statusOutput.textContent =
               "Latency is too high. Increase workers, cache hit rate, or both.";
@@ -264,9 +270,7 @@
       cacheInput.addEventListener("input", updateSimulation);
       cacheInput.addEventListener("change", updateSimulation);
 
-      /*
-       * Send the initial 5-worker / 40%-cache configuration to edX.
-       */
+      restoreSavedValues();
       updateSimulation();
     }());
   </script>
