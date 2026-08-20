@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Color Mixing Challenge</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            margin: 0; 
+        }
+        .slider-container { 
+            margin-bottom: 15px; 
+        }
+        .color-display { 
+            width: 100px; 
+            height: 100px; 
+            border: 2px solid #ccc; 
+            display: inline-block;
+            margin-right: 20px;
+            vertical-align: top;
+        }
+        input[type="range"] { 
+            width: 300px; 
+        }
+        button { 
+            padding: 10px 20px; 
+            font-size: 16px; 
+            cursor: pointer; 
+        }
+        #feedback { 
+            margin-top: 15px; 
+            font-weight: bold; 
+        }
+        .color-section { 
+            display: inline-block; 
+            margin-right: 20px; 
+        }
+    </style>
+</head>
+<body>
+    <h3>Color Mixing Challenge</h3>
+    <p>Mix the primary colors to create the target color: <strong style="color: #FF6B35;">Orange-Red (#FF6B35)</strong></p>
+    
+    <div class="slider-container">
+        <label>Red: <span id="red-value">128</span></label><br/>
+        <input type="range" id="red-slider" min="0" max="255" value="128" />
+    </div>
+    <div class="slider-container">
+        <label>Green: <span id="green-value">128</span></label><br/>
+        <input type="range" id="green-slider" min="0" max="255" value="128" />
+    </div>
+    <div class="slider-container">
+        <label>Blue: <span id="blue-value">128</span></label><br/>
+        <input type="range" id="blue-slider" min="0" max="255" value="128" />
+    </div>
+    
+    <div style="margin: 20px 0;">
+        <div class="color-section">
+            <p>Your Color:</p>
+            <div id="user-color" class="color-display" style="background-color: #808080;"></div>
+            <p id="user-hex" style="font-family: monospace;">#808080</p>
+        </div>
+        <div class="color-section">
+            <p>Target Color:</p>
+            <div class="color-display" style="background-color: #FF6B35;"></div>
+            <p style="font-family: monospace;">#FF6B35</p>
+        </div>
+    </div>
+    
+    <button type="button" onclick="ColorMixer.checkAnswer()">Check Answer</button>
+    <div id="feedback"></div>
+
+    <script>
+    window.ColorMixer = (function() {
+        var targetR = 255, targetG = 107, targetB = 53;
+        var tolerance = 15;
+        
+        function updateColor() {
+            var r = document.getElementById('red-slider').value;
+            var g = document.getElementById('green-slider').value;
+            var b = document.getElementById('blue-slider').value;
+            
+            document.getElementById('red-value').textContent = r;
+            document.getElementById('green-value').textContent = g;
+            document.getElementById('blue-value').textContent = b;
+            
+            var hex = '#' + 
+                ('0' + parseInt(r).toString(16)).slice(-2) +
+                ('0' + parseInt(g).toString(16)).slice(-2) +
+                ('0' + parseInt(b).toString(16)).slice(-2);
+            
+            document.getElementById('user-color').style.backgroundColor = hex;
+            document.getElementById('user-hex').textContent = hex.toUpperCase();
+        }
+        
+        // Initialize event listeners
+        document.getElementById('red-slider').addEventListener('input', updateColor);
+        document.getElementById('green-slider').addEventListener('input', updateColor);
+        document.getElementById('blue-slider').addEventListener('input', updateColor);
+        
+        // Initial update
+        updateColor();
+        
+        return {
+            checkAnswer: function() {
+                var r = parseInt(document.getElementById('red-slider').value);
+                var g = parseInt(document.getElementById('green-slider').value);
+                var b = parseInt(document.getElementById('blue-slider').value);
+                
+                var correct = Math.abs(r - targetR) <= tolerance && 
+                              Math.abs(g - targetG) <= tolerance && 
+                              Math.abs(b - targetB) <= tolerance;
+                
+                var feedback = document.getElementById('feedback');
+                if (correct) {
+                    feedback.style.color = 'green';
+                    feedback.textContent = 'Excellent! You matched the color!';
+                } else {
+                    var distance = Math.sqrt(
+                        Math.pow(r - targetR, 2) + 
+                        Math.pow(g - targetG, 2) + 
+                        Math.pow(b - targetB, 2)
+                    );
+                    if (distance < 50) {
+                        feedback.style.color = 'orange';
+                        feedback.textContent = 'Very close! Try adjusting your values slightly.';
+                    } else {
+                        feedback.style.color = 'red';
+                        feedback.textContent = 'Not quite right. Keep experimenting!';
+                    }
+                }
+            },
+            
+            getState: function() {
+                var state = {
+                    red: document.getElementById('red-slider').value,
+                    green: document.getElementById('green-slider').value,
+                    blue: document.getElementById('blue-slider').value
+                };
+                console.log('Getting state:', state);
+                return JSON.stringify(state);
+            },
+            
+            setState: function(stateStr) {
+                console.log('Setting state:', stateStr);
+                if (stateStr) {
+                    try {
+                        var state = JSON.parse(stateStr);
+                        document.getElementById('red-slider').value = state.red || 128;
+                        document.getElementById('green-slider').value = state.green || 128;
+                        document.getElementById('blue-slider').value = state.blue || 128;
+                        updateColor();
+                    } catch(e) {
+                        console.error('Error parsing state:', e);
+                    }
+                }
+            },
+            
+            getGrade: function() {
+                var r = parseInt(document.getElementById('red-slider').value);
+                var g = parseInt(document.getElementById('green-slider').value);
+                var b = parseInt(document.getElementById('blue-slider').value);
+                
+                var correct = Math.abs(r - targetR) <= tolerance && 
+                              Math.abs(g - targetG) <= tolerance && 
+                              Math.abs(b - targetB) <= tolerance;
+                
+                console.log('Grading:', {r: r, g: g, b: b, correct: correct});
+                
+                // Return in the format expected by check_function
+                return JSON.stringify({
+                    "correct": correct
+                });
+            }
+        };
+    })();
+    </script>
+</body>
+</html>
