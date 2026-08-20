@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimal Test</title>
+</head>
+<body>
+    <h3>Minimal Test</h3>
+    <p>Value: <span id="value">5</span></p>
+    <button onclick="increase()">Increase</button>
+    
+    <script>
+    var value = 5;
+    
+    function increase() {
+        value++;
+        document.getElementById('value').textContent = value;
+    }
+    
+    // These MUST be defined at window level
+    window.getState = function() {
+        return JSON.stringify({value: value});
+    };
+    
+    window.setState = function(state) {
+        if (state) {
+            var parsed = JSON.parse(state);
+            value = parsed.value || 5;
+            document.getElementById('value').textContent = value;
+        }
+    };
+    
+    window.getGrade = function() {
+        return JSON.stringify({correct: value >= 10});
+    };
+    </script>
+</body>
+</html>
