@@ -69,15 +69,22 @@
     
     <button type="button" onclick="ColorMixer.checkAnswer()">Check Answer</button>
     <div id="feedback"></div>
+    
+    <!-- Debug info -->
+    <div style="margin-top: 20px; padding: 10px; background: #f0f0f0; font-size: 12px;">
+        <strong>Debug Info:</strong>
+        <div id="debug"></div>
+    </div>
 
     <script>
     // Create ColorMixer in global scope
-    window.ColorMixer = (function() {
-        var targetR = 255, targetG = 107, targetB = 53;
-        var tolerance = 15;
-        var parent = window.parent;
+    window.ColorMixer = {
+        targetR: 255,
+        targetG: 107,
+        targetB: 53,
+        tolerance: 15,
         
-        function updateColor() {
+        updateColor: function() {
             var r = document.getElementById('red-slider').value;
             var g = document.getElementById('green-slider').value;
             var b = document.getElementById('blue-slider').value;
@@ -94,121 +101,93 @@
             document.getElementById('user-color').style.backgroundColor = hex;
             document.getElementById('user-hex').textContent = hex.toUpperCase();
             
-            // Notify parent frame that state has changed
-            if (parent && parent !== window) {
-                try {
-                    parent.postMessage({type: 'jsInputChanged'}, '*');
-                } catch(e) {
-                    console.log('Could not post message to parent');
-                }
-            }
-        }
+            // Update debug info
+            document.getElementById('debug').innerHTML = 
+                'Current RGB: (' + r + ', ' + g + ', ' + b + ')<br>' +
+                'Target RGB: (255, 107, 53)<br>' +
+                'State: ' + ColorMixer.getState();
+        },
         
-        // Initialize event listeners
-        function init() {
-            document.getElementById('red-slider').addEventListener('input', updateColor);
-            document.getElementById('green-slider').addEventListener('input', updateColor);
-            document.getElementById('blue-slider').addEventListener('input', updateColor);
+        checkAnswer: function() {
+            var r = parseInt(document.getElementById('red-slider').value);
+            var g = parseInt(document.getElementById('green-slider').value);
+            var b = parseInt(document.getElementById('blue-slider').value);
             
-            // Initial update
-            updateColor();
-        }
-        
-        // Call init when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
-        }
-        
-        return {
-            checkAnswer: function() {
-                var r = parseInt(document.getElementById('red-slider').value);
-                var g = parseInt(document.getElementById('green-slider').value);
-                var b = parseInt(document.getElementById('blue-slider').value);
-                
-                var correct = Math.abs(r - targetR) <= tolerance && 
-                              Math.abs(g - targetG) <= tolerance && 
-                              Math.abs(b - targetB) <= tolerance;
-                
-                var feedback = document.getElementById('feedback');
-                if (correct) {
-                    feedback.style.color = 'green';
-                    feedback.textContent = 'Excellent! You matched the color!';
+            var correct = Math.abs(r - this.targetR) <= this.tolerance && 
+                          Math.abs(g - this.targetG) <= this.tolerance && 
+                          Math.abs(b - this.targetB) <= this.tolerance;
+            
+            var feedback = document.getElementById('feedback');
+            if (correct) {
+                feedback.style.color = 'green';
+                feedback.textContent = 'Excellent! You matched the color!';
+            } else {
+                var distance = Math.sqrt(
+                    Math.pow(r - this.targetR, 2) + 
+                    Math.pow(g - this.targetG, 2) + 
+                    Math.pow(b - this.targetB, 2)
+                );
+                if (distance < 50) {
+                    feedback.style.color = 'orange';
+                    feedback.textContent = 'Very close! Try adjusting your values slightly.';
                 } else {
-                    var distance = Math.sqrt(
-                        Math.pow(r - targetR, 2) + 
-                        Math.pow(g - targetG, 2) + 
-                        Math.pow(b - targetB, 2)
-                    );
-                    if (distance < 50) {
-                        feedback.style.color = 'orange';
-                        feedback.textContent = 'Very close! Try adjusting your values slightly.';
-                    } else {
-                        feedback.style.color = 'red';
-                        feedback.textContent = 'Not quite right. Keep experimenting!';
-                    }
+                    feedback.style.color = 'red';
+                    feedback.textContent = 'Not quite right. Keep experimenting!';
                 }
-                
-                // Notify parent that answer was checked
-                if (parent && parent !== window) {
-                    try {
-                        parent.postMessage({type: 'jsInputChanged'}, '*');
-                    } catch(e) {
-                        console.log('Could not post message to parent');
-                    }
-                }
-            },
-            
-            getState: function() {
-                var state = {
-                    red: document.getElementById('red-slider') ? document.getElementById('red-slider').value : "128",
-                    green: document.getElementById('green-slider') ? document.getElementById('green-slider').value : "128",
-                    blue: document.getElementById('blue-slider') ? document.getElementById('blue-slider').value : "128"
-                };
-                console.log('ColorMixer.getState called, returning:', state);
-                return JSON.stringify(state);
-            },
-            
-            setState: function(stateStr) {
-                console.log('ColorMixer.setState called with:', stateStr);
-                if (stateStr) {
-                    try {
-                        var state = JSON.parse(stateStr);
-                        if (document.getElementById('red-slider')) {
-                            document.getElementById('red-slider').value = state.red || "128";
-                            document.getElementById('green-slider').value = state.green || "128";
-                            document.getElementById('blue-slider').value = state.blue || "128";
-                            updateColor();
-                        }
-                    } catch(e) {
-                        console.error('Error parsing state:', e);
-                    }
-                }
-            },
-            
-            getGrade: function() {
-                var r = parseInt(document.getElementById('red-slider').value);
-                var g = parseInt(document.getElementById('green-slider').value);
-                var b = parseInt(document.getElementById('blue-slider').value);
-                
-                var correct = Math.abs(r - targetR) <= tolerance && 
-                              Math.abs(g - targetG) <= tolerance && 
-                              Math.abs(b - targetB) <= tolerance;
-                
-                console.log('ColorMixer.getGrade called, returning:', {correct: correct});
-                
-                return JSON.stringify({
-                    "correct": correct
-                });
             }
-        };
-    })();
+        },
+        
+        getState: function() {
+            var state = {
+                red: document.getElementById('red-slider').value,
+                green: document.getElementById('green-slider').value,
+                blue: document.getElementById('blue-slider').value
+            };
+            return JSON.stringify(state);
+        },
+        
+        setState: function(stateStr) {
+            console.log('setState called with:', stateStr);
+            if (stateStr) {
+                try {
+                    var state = JSON.parse(stateStr);
+                    document.getElementById('red-slider').value = state.red || "128";
+                    document.getElementById('green-slider').value = state.green || "128";
+                    document.getElementById('blue-slider').value = state.blue || "128";
+                    this.updateColor();
+                } catch(e) {
+                    console.error('Error in setState:', e);
+                }
+            }
+        },
+        
+        getGrade: function() {
+            var r = parseInt(document.getElementById('red-slider').value);
+            var g = parseInt(document.getElementById('green-slider').value);
+            var b = parseInt(document.getElementById('blue-slider').value);
+            
+            var correct = Math.abs(r - this.targetR) <= this.tolerance && 
+                          Math.abs(g - this.targetG) <= this.tolerance && 
+                          Math.abs(b - this.targetB) <= this.tolerance;
+            
+            var result = JSON.stringify({"correct": correct});
+            console.log('getGrade returning:', result);
+            document.getElementById('debug').innerHTML += '<br>Grade result: ' + result;
+            
+            return result;
+        }
+    };
     
-    // Also expose functions directly on window for compatibility
-    window.getState = function() { return ColorMixer.getState(); };
-    window.setState = function(state) { return ColorMixer.setState(state); };
-    window.getGrade = function() { return ColorMixer.getGrade(); };
+    // Initialize
+    document.getElementById('red-slider').addEventListener('input', function() { ColorMixer.updateColor(); });
+    document.getElementById('green-slider').addEventListener('input', function() { ColorMixer.updateColor(); });
+    document.getElementById('blue-slider').addEventListener('input', function() { ColorMixer.updateColor(); });
+    
+    // Initial update
+    ColorMixer.updateColor();
+    
+    // Log that we're ready
+    console.log('ColorMixer initialized');
     </script>
 </body>
 </html>
